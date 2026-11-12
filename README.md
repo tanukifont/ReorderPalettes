@@ -1,56 +1,50 @@
 # ReorderPalettes for Glyphs 4
 
-Glyphs 4 の右サイドバーにあるパレットの表示順を変更するプラグインです。Morisawa Inc. が公開した ReorderPalettes を基に、Tanukifont が Glyphs 4 対応を加えた非公式 fork です。[元のリポジトリ](https://github.com/morisawa-inc/ReorderPalettes)
+A plug-in for changing the order of palettes in the Glyphs 4 sidebar. This unofficial fork of Morisawa Inc.'s ReorderPalettes adds Glyphs 4 compatibility and is maintained by Tanukifont. [Original repository](https://github.com/morisawa-inc/ReorderPalettes)
 
-![Glyphs 4 のパレット並べ替えダイアログ](ReorderPalettes.png)
+![Palette reordering dialog in Glyphs 4](ReorderPalettes.png)
 
-## インストール
+## Installation
 
-1. [Releases](https://github.com/tanukifont/ReorderPalettes/releases) から `ReorderPalettes-0.1.4.zip` をダウンロードして展開します。
-2. `ReorderPalettes.glyphsPlugin` をダブルクリックし、Glyphs 4 のインストール確認を進めます。既存の ReorderPalettes がある場合は置き換えます。
-3. Glyphs 4 を再起動します。
+1. Download `ReorderPalettes-0.1.4.zip` from [Releases](https://github.com/tanukifont/ReorderPalettes/releases) and extract it.
+2. Double-click `ReorderPalettes.glyphsPlugin` and confirm installation in Glyphs 4. Replace the existing ReorderPalettes installation if prompted.
+3. Restart Glyphs 4.
 
-## 使い方
+## Usage
 
-1. フォントウィンドウを開きます。
-2. **Glyphs → Reorder Palettes…** を選びます。
-3. 行をドラッグしてパレットの順序を変更します。
-4. **Close** を押すと、開いているフォントウィンドウへ並び順が反映されます。
+1. Open a font window.
+2. Choose **Glyphs → Reorder Palettes…**.
+3. Drag rows to change the palette order.
+4. Click **Close** to apply the order to the open font windows.
 
-**Reset** を押してから **Close** を押すと、Glyphs の初期順に戻ります。並び順は新しく開くウィンドウと再起動後にも引き継がれます。
+Click **Reset**, then **Close**, to restore the default order. Your custom order is also used in new windows and after restarting Glyphs.
 
-## Glyphs 4 対応での変更
+## Glyphs 4 changes
 
-- Glyphs 4 のサイドバーで読み込み済みのパレットを使用
-- 既存のウィンドウへの並べ替え反映
-- 通常の設定ウィンドウとしての表示
-- ドラッグ後の一覧表示と内部データの同期
-- Python 製パレットと複数クラスを含むプラグインの識別子表示
+- Uses palette instances already loaded in the Glyphs 4 sidebar.
+- Applies reordering to existing font windows.
+- Opens as a modeless settings window.
+- Keeps the table display synchronized with the underlying order after dragging.
+- Displays bundle identifiers for Python palettes and plug-ins containing multiple principal classes.
 
-## 動作環境と確認範囲
+## Requirements and verification
 
 - Glyphs 4
-- macOS 12 以降
-- Apple Silicon と Intel 向けの Universal バイナリ
+- macOS 12 or later
+- Universal binary containing Apple Silicon and Intel code
 
-実機で確認した環境は Glyphs 4.2（4202）、macOS 27.2.1、Apple Silicon です。その他の Glyphs ビルド、Intel Mac での実行、複数行の同時ドラッグは未確認です。詳しい確認内容は [TESTING.md](TESTING.md) を参照してください。
+Native verification covers Glyphs 4.2 (4202) on macOS 27.2.1 with Apple Silicon. Other Glyphs builds, Intel Mac execution, and multiple-row mouse dragging have not been verified. See [TESTING.md](TESTING.md) for details.
 
-## ソースからビルド
+## Building from source
 
-macOS の Xcode Command Line Tools を使用します。
+Use Xcode Command Line Tools on macOS.
 
 ```sh
 make
 make archive
 ```
 
-プラグインはリポジトリ直下、配布 ZIP は `build/` に生成されます。Xcode では `ReorderPalettes4` ターゲットを使用します。
-
-## English
-
-This unofficial fork adapts Morisawa Inc.'s ReorderPalettes to Glyphs 4. Drag rows in **Glyphs → Reorder Palettes…** and click **Close** to update the open font windows. **Reset** followed by **Close** restores the default order. The saved order is also used in new windows and after restarting Glyphs.
-
-Download the ZIP from [Releases](https://github.com/tanukifont/ReorderPalettes/releases), install the `.glyphsPlugin`, and restart Glyphs 4. Native verification covers Glyphs 4.2 (4202) on Apple Silicon. The package includes arm64 and x86_64 code. See [TESTING.md](TESTING.md) for coverage.
+The plug-in is built in the repository root. The distribution ZIP is created in `build/`. To build in Xcode, use the `ReorderPalettes4` target.
 
 ## License
 
