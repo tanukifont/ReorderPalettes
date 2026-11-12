@@ -6,6 +6,7 @@
 //  Copyright © 2021 Morisawa Inc. All rights reserved.
 //
 
+// Modified for Glyphs 4 compatibility in 2026.
 #import <Cocoa/Cocoa.h>
 
 @protocol ROPWindowControllerDelegate;
@@ -16,8 +17,6 @@
 
 - (IBAction)handleClose:(id)sender;
 - (IBAction)handleReset:(id)sender;
-
-- (void)runModal;
 
 @end
 

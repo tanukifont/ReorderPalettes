@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1200"
+   LastUpgradeVersion = "1240"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E7CCE8371DC7424900C31BEF"
+               BlueprintIdentifier = "E74712B6296FF781001D2ABA"
                BuildableName = "ReorderPalettes.glyphsPlugin"
-               BlueprintName = "ReorderPalettes2"
+               BlueprintName = "ReorderPalettes4"
                ReferencedContainer = "container:ReorderPalettes.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -42,18 +42,9 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         BundleIdentifier = "com.GeorgSeifert.Glyphs2"
-         FilePath = "/Applications/Glyphs Debuggable.app">
+         BundleIdentifier = "com.GeorgSeifert.Glyphs4"
+         FilePath = "/Applications/Glyphs 4.app">
       </PathRunnable>
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E7CCE8371DC7424900C31BEF"
-            BuildableName = "ReorderPalettes.glyphsPlugin"
-            BlueprintName = "ReorderPalettes2"
-            ReferencedContainer = "container:ReorderPalettes.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -64,9 +55,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E7CCE8371DC7424900C31BEF"
+            BlueprintIdentifier = "E74712B6296FF781001D2ABA"
             BuildableName = "ReorderPalettes.glyphsPlugin"
-            BlueprintName = "ReorderPalettes2"
+            BlueprintName = "ReorderPalettes4"
             ReferencedContainer = "container:ReorderPalettes.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

@@ -6,134 +6,121 @@
 //  Copyright © 2021 Morisawa Inc. All rights reserved.
 //
 
+// Adapted for the Glyphs 4 sidebar.
+// Modified for Glyphs 4 compatibility in 2026.
 #import "ROPPalettePlugin.h"
-#import "ROPPalettePluginManager.h"
-#import <GlyphsCore/GlyphsPaletteProtocol.h>
 
-static NSBundle * GetCorrespondingBundleForInstance(id instance, NSArray<NSBundle *> *bundles) {
-    for (NSBundle *bundle in bundles) {
-        if ([instance isMemberOfClass:[bundle principalClass]]) return bundle;
-    }
-    return nil;
+NSString *const ROPOrderKey = @"jp.co.morisawa.ReorderPalettes";
+static NSArray<ROPPalettePlugin *> *defaultPalettes;
+
+@protocol ROPPaletteTitle <NSObject>
+- (NSString *)title;
+@end
+
+@interface ROPPalettePlugin ()
+- (instancetype)initWithPalette:(id<ROPPaletteTitle>)palette;
+@end
+
+static NSArray *SortedPalettes(NSArray *palettes, NSString *(^className)(id)) {
+    NSDictionary *order = [[NSUserDefaults standardUserDefaults] dictionaryForKey:ROPOrderKey];
+    if (!order.count) return palettes;
+
+    return [palettes sortedArrayWithOptions:NSSortStable usingComparator:^NSComparisonResult(id left, id right) {
+        NSNumber *leftRank = order[className(left)];
+        NSNumber *rightRank = order[className(right)];
+        if (![leftRank isKindOfClass:NSNumber.class]) leftRank = nil;
+        if (![rightRank isKindOfClass:NSNumber.class]) rightRank = nil;
+        if (leftRank && rightRank) return [leftRank compare:rightRank];
+        if (leftRank) return NSOrderedAscending;
+        if (rightRank) return NSOrderedDescending;
+        return NSOrderedSame;
+    }];
 }
 
-@protocol GSMenuProtocol <NSObject>
-- (NSMutableArray<NSBundle *> *)paletteBundles;
-- (NSMutableArray<Class> *)paletteClasses;
-- (NSMutableDictionary<NSString *, NSBundle *> *)pluginBundles;
-@end
+// Python-defined classes belong to the host executable at the Objective-C
+// runtime level. Resolve their owning plug-in from its declared principal classes.
+static NSString *BundleIdentifierForPalette(id palette) {
+    Class paletteClass = [palette class];
+    NSString *className = NSStringFromClass(paletteClass);
+    for (NSBundle *bundle in NSBundle.allBundles) {
+        NSString *principalClass = [bundle objectForInfoDictionaryKey:@"NSPrincipalClass"];
+        id principalClasses = [bundle objectForInfoDictionaryKey:@"Principal Classes"];
+        BOOL containsClass = [principalClasses isKindOfClass:NSArray.class] &&
+                             [principalClasses containsObject:className];
+        if ([principalClass isEqualToString:className] || containsClass) {
+            if (bundle.bundleIdentifier.length) return bundle.bundleIdentifier;
+        }
+    }
+
+    NSBundle *classBundle = [NSBundle bundleForClass:paletteClass];
+    if (classBundle != NSBundle.mainBundle && classBundle.bundleIdentifier.length) {
+        return classBundle.bundleIdentifier;
+    }
+    return @"—";
+}
 
 @implementation ROPPalettePlugin
 
-+ (NSArray<NSBundle *> *)availablePaletteBundles {
-    id<GSMenuProtocol> menu = (id<GSMenuProtocol>)[[NSApplication sharedApplication] delegate];
-    if ([menu respondsToSelector:@selector(paletteClasses)]) {
-        NSMutableArray<NSBundle *> *mutableBundles = [[NSMutableArray alloc] initWithCapacity:0];
-        NSSet<Class> *paletteClasses = [NSSet setWithArray:[menu paletteClasses]];
-        for (NSBundle *bundle in [[menu pluginBundles] allValues]) {
-            if ([paletteClasses containsObject:[bundle principalClass]]) {
-                [mutableBundles addObject:bundle];
-            }
-        }
-        return [mutableBundles copy];
++ (void)applySavedOrderToPaletteInstances:(NSMutableArray *)instances {
+    NSMutableArray *entries = [NSMutableArray arrayWithCapacity:instances.count];
+    NSMutableSet *classNames = [NSMutableSet setWithCapacity:instances.count];
+    for (id palette in instances) {
+        NSString *className = NSStringFromClass([palette class]);
+        if ([classNames containsObject:className]) continue;
+        [classNames addObject:className];
+        [entries addObject:[[self alloc] initWithPalette:palette]];
     }
-    return [[menu paletteBundles] copy];
+    if (entries.count) defaultPalettes = [entries copy];
+
+    [instances setArray:[self paletteInstancesInSavedOrder:[instances copy]]];
+}
+
++ (NSArray *)paletteInstancesInSavedOrder:(NSArray *)instances {
+    return SortedPalettes(instances, ^NSString *(id palette) {
+        return NSStringFromClass([palette class]);
+    });
 }
 
 + (NSArray<ROPPalettePlugin *> *)availablePalettePluginsWithOptions:(ROPPalettePluginEnumeratingOptions)options {
-    NSMutableArray <ROPPalettePlugin *> *mutablePlugins = [[NSMutableArray alloc] initWithCapacity:0];
-    NSMutableSet<NSString *> *mutableClassNames = [[NSMutableSet alloc] initWithCapacity:0];
-    NSArray<NSBundle *> *availablePaletteBundles = [[self class] availablePaletteBundles];
-    for (NSBundle *bundle in availablePaletteBundles) {
-        Class principalClass = [bundle principalClass];
-        if (principalClass) {
-            NSString *className = NSStringFromClass(principalClass);
-            if (className && ![mutableClassNames containsObject:className]) {
-                @try {
-                    NSObject<GlyphsPalette> *instance = [[principalClass alloc] init];
-                    if ([instance respondsToSelector:@selector(loadPlugin)]) [instance loadPlugin];
-                    ROPPalettePlugin *plugin = [[[self class] alloc] initWithInstance:instance options:options bundles:availablePaletteBundles];
-                    if (plugin) {
-                        [mutablePlugins addObject:plugin];
-                        [mutableClassNames addObject:className];
-                    }
-                } @catch (NSException *exception) {
-                    NSLog(@"%@", [exception description]);
-                }
-            }
-        }
-    }
-    [mutablePlugins sortUsingSelector:@selector(compare:)];
-    return [mutablePlugins copy];
+    NSArray *palettes = defaultPalettes ?: @[];
+    if (options & ROPPalettePluginEnumeratingOptionsPreferOriginalSortID) return palettes;
+    return SortedPalettes(palettes, ^NSString *(ROPPalettePlugin *palette) {
+        return palette.className;
+    });
 }
 
 + (NSDictionary<NSString *, NSNumber *> *)dictionaryFromPalettePlugins:(NSArray<ROPPalettePlugin *> *)plugins {
-    NSMutableDictionary <NSString *, NSNumber *> *mutableDictionary = [[NSMutableDictionary alloc] initWithCapacity:0];
-    NSUInteger currentSortID = 0;
-    for (ROPPalettePlugin *plugin in plugins) {
-        if ([plugin className]) {
-            [mutableDictionary setObject:[NSNumber numberWithUnsignedInteger:currentSortID] forKey:[plugin className]];
-            currentSortID += 10;
-        }
-    }
-    return [mutableDictionary copy];
+    NSMutableDictionary *order = [NSMutableDictionary dictionaryWithCapacity:plugins.count];
+    [plugins enumerateObjectsUsingBlock:^(ROPPalettePlugin *palette, NSUInteger index, BOOL *stop) {
+        order[palette.className] = @(index * 10);
+    }];
+    return [order copy];
 }
 
-- (instancetype)initWithInstance:(id<GlyphsPalette>)instance options:(ROPPalettePluginEnumeratingOptions)options bundles:(NSArray<NSBundle *> *)bundles {
-    Class class = [(NSObject *)instance class];
-    if (class) {
-        NSString *className = NSStringFromClass([(NSObject *)instance class]);
-        NSString *identifier = [GetCorrespondingBundleForInstance(instance, bundles) bundleIdentifier];
-        if (className && identifier) {
-            BOOL enabled = [[ROPPalettePluginManager sharedManager] isEnabled];
-            if (options & ROPPalettePluginEnumeratingOptionsPreferOriginalSortID) [[ROPPalettePluginManager sharedManager] setEnabled:NO];
-            NSString *title = [(NSObject *)instance respondsToSelector:@selector(title)] ? [instance title] : @"";
-            NSUInteger sortID = [(NSObject *)instance respondsToSelector:@selector(sortID)] ? [instance sortID] : 0;
-            [[ROPPalettePluginManager sharedManager] setEnabled:enabled];
-            if ((self = [self initWithTitle:title identifier:identifier className:className sortID:sortID])) {
-                
-            }
-            return self;
+- (instancetype)initWithPalette:(id<ROPPaletteTitle>)palette {
+    if ((self = [super init])) {
+        _className = NSStringFromClass([palette class]);
+        _identifier = BundleIdentifierForPalette(palette);
+        @try {
+            if ([palette respondsToSelector:@selector(title)]) _title = [[palette title] copy];
+        } @catch (NSException *exception) {
+            NSLog(@"Reorder Palettes: could not read the title of %@: %@", _className, exception);
         }
-    }
-    return nil;
-}
-
-- (instancetype)initWithTitle:(NSString *)title identifier:(NSString *)identifier className:(NSString *)className sortID:(NSUInteger)sortID {
-    if ((self = [self init])) {
-        _title = title;
-        _identifier = identifier;
-        _className = className;
-        _sortID = sortID;
+        if (!_title.length) _title = _className;
     }
     return self;
 }
 
-- (NSComparisonResult)compare:(ROPPalettePlugin *)object {
-    if ([self sortID] < [object sortID]) return NSOrderedAscending;
-    if ([self sortID] > [object sortID]) return NSOrderedDescending;
-    return [[self title] compare:[object title]];
-}
-
 - (NSUInteger)hash {
-    return [_className hash];
+    return self.className.hash;
 }
 
 - (BOOL)isEqual:(id)object {
-    if ([object isKindOfClass:[self class]]) {
-        if ([[object className] isEqualToString:[self className]]) {
-            return YES;
-        }
-    }
-    return NO;
+    return object == self || ([object isKindOfClass:ROPPalettePlugin.class] &&
+                              [self.className isEqualToString:[object className]]);
 }
 
-- (NSString *)description {
-    NSString *description = [super description];
-    return [description stringByAppendingFormat:@"<%@, %@, %lu>", [self title], [self identifier], [self sortID]];
-}
-
-- (instancetype)copyWithZone:(NSZone *)zone {
+- (id)copyWithZone:(NSZone *)zone {
     return self;
 }
 

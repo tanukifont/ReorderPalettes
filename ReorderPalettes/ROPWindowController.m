@@ -6,20 +6,15 @@
 //  Copyright © 2021 Morisawa Inc. All rights reserved.
 //
 
+// Adapted for the Glyphs 4 sidebar.
+// Modified for Glyphs 4 compatibility in 2026.
 #import "ROPWindowController.h"
 #import "ROPPalettePlugin.h"
 #import "ROPTableColumn.h"
 
-static inline void MoveObjectInArray(NSMutableArray *mutableArray, NSUInteger atIndex, NSUInteger toIndex) {
-    id object = [mutableArray objectAtIndex:atIndex];
-    [mutableArray removeObjectAtIndex:atIndex];
-    [mutableArray insertObject:object atIndex:toIndex];
-}
+static NSString *const RowPasteboardType = @"jp.co.morisawa.ReorderPalettes.row";
 
-@interface ROPWindowController () <NSTableViewDataSource> {
-@private
-    BOOL _isRunningModal;
-}
+@interface ROPWindowController () <NSTableViewDataSource>
 @property (nonatomic, readwrite) NSMutableArray<ROPPalettePlugin *> *mutablePalettePlugins;
 @property (nonatomic, weak) IBOutlet NSTableView *tableView;
 @property (nonatomic, weak) IBOutlet NSArrayController *arrayController;
@@ -37,7 +32,7 @@ static inline void MoveObjectInArray(NSMutableArray *mutableArray, NSUInteger at
 
 - (void)awakeFromNib {
     [super awakeFromNib];
-    [_tableView registerForDraggedTypes:@[@"public.text"]];
+    [_tableView registerForDraggedTypes:@[RowPasteboardType]];
     [_tableView setDataSource:self];
 }
 
@@ -45,24 +40,12 @@ static inline void MoveObjectInArray(NSMutableArray *mutableArray, NSUInteger at
     [self willChangeValueForKey:@"mutablePalettePlugins"];
     [_mutablePalettePlugins setArray:[ROPPalettePlugin availablePalettePluginsWithOptions:ROPPalettePluginEnumeratingOptionsPreferOriginalSortID]];
     [self didChangeValueForKey:@"mutablePalettePlugins"];
+    [_arrayController rearrangeObjects];
+    [_tableView reloadData];
 }
 
 - (IBAction)handleClose:(id)sender {
     [self close];
-}
-
-- (void)runModal {
-    if (!_isRunningModal) {
-        _isRunningModal = YES;
-        [[NSApplication sharedApplication] runModalForWindow:[self window]];
-    }
-}
-
-- (void)stopModalIfNeeded {
-    if (_isRunningModal) {
-        [[NSApplication sharedApplication] stopModal];
-        _isRunningModal = NO;
-    }
 }
 
 #pragma mark -
@@ -75,7 +58,6 @@ static inline void MoveObjectInArray(NSMutableArray *mutableArray, NSUInteger at
 #pragma mark -
 
 - (void)windowWillClose:(NSNotification *)notification {
-    [self stopModalIfNeeded];
     if ([[self delegate] respondsToSelector:@selector(windowController:didReorderPalettePluginsWithDictionary:)]) {
         if ([self hasModifiedFromDefaultOrder]) {
             [[self delegate] windowController:self didReorderPalettePluginsWithDictionary:[ROPPalettePlugin dictionaryFromPalettePlugins:_mutablePalettePlugins]];
@@ -99,38 +81,38 @@ static inline void MoveObjectInArray(NSMutableArray *mutableArray, NSUInteger at
 
 - (nullable id <NSPasteboardWriting>)tableView:(NSTableView *)tableView pasteboardWriterForRow:(NSInteger)row {
     NSPasteboardItem *item = [[NSPasteboardItem alloc] init];
-    [item setString:[NSString stringWithFormat:@"%ld", row] forType:@"public.text"];
+    [item setString:[NSString stringWithFormat:@"%ld", row] forType:RowPasteboardType];
     return item;
 }
 
 - (NSDragOperation)tableView:(NSTableView *)tableView validateDrop:(id <NSDraggingInfo>)info proposedRow:(NSInteger)row proposedDropOperation:(NSTableViewDropOperation)dropOperation {
-    return (dropOperation == NSTableViewDropAbove) ? NSDragOperationMove : NSDragOperationNone;
+    return (info.draggingSource == tableView && dropOperation == NSTableViewDropAbove &&
+            row >= 0 && row <= tableView.numberOfRows) ? NSDragOperationMove : NSDragOperationNone;
 }
 
 - (BOOL)tableView:(NSTableView *)tableView acceptDrop:(id <NSDraggingInfo>)info row:(NSInteger)row dropOperation:(NSTableViewDropOperation)dropOperation {
+    if (![self tableView:tableView validateDrop:info proposedRow:row proposedDropOperation:dropOperation]) return NO;
     NSMutableIndexSet *mutableOriginalRowIndexes = [[NSMutableIndexSet alloc] init];
     [info enumerateDraggingItemsWithOptions:0 forView:tableView classes:@[[NSPasteboardItem class]] searchOptions:@{} usingBlock:^(NSDraggingItem * _Nonnull draggingItem, NSInteger idx, BOOL * _Nonnull stop) {
         NSPasteboardItem *item = [draggingItem item];
-        NSString *stringValue = [item stringForType:@"public.text"];
-        if (stringValue) {
+        NSString *stringValue = [item stringForType:RowPasteboardType];
+        if (stringValue && stringValue.integerValue >= 0 && stringValue.integerValue < tableView.numberOfRows) {
             [mutableOriginalRowIndexes addIndex:[stringValue integerValue]];
         }
     }];
-    [tableView beginUpdates];
-    __block NSInteger originalIndexOffset = 0;
-    __block NSInteger currentIndexOffset  = 0;
-    [mutableOriginalRowIndexes enumerateIndexesUsingBlock:^(NSUInteger originalRowIndex, BOOL *stop) {
-        if (originalRowIndex < row) {
-            [tableView moveRowAtIndex:originalRowIndex + originalIndexOffset toIndex:row - 1];
-            MoveObjectInArray([_arrayController content], originalRowIndex + originalIndexOffset, row - 1);
-            --originalIndexOffset;
-        } else {
-            [tableView moveRowAtIndex:originalRowIndex toIndex:row + currentIndexOffset];
-            MoveObjectInArray([_arrayController content], originalRowIndex, row + currentIndexOffset);
-            ++currentIndexOffset;
-        }
-    }];
-    [tableView endUpdates];
+    if (!mutableOriginalRowIndexes.count) return NO;
+    NSArray *movedPalettes = [_mutablePalettePlugins objectsAtIndexes:mutableOriginalRowIndexes];
+    NSUInteger destination = (NSUInteger)row - [mutableOriginalRowIndexes countOfIndexesInRange:NSMakeRange(0, (NSUInteger)row)];
+    NSIndexSet *destinationIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(destination, movedPalettes.count)];
+
+    // Notify the NSArrayController binding once for the complete change.
+    [self willChangeValueForKey:@"mutablePalettePlugins"];
+    [_mutablePalettePlugins removeObjectsAtIndexes:mutableOriginalRowIndexes];
+    [_mutablePalettePlugins insertObjects:movedPalettes atIndexes:destinationIndexes];
+    [self didChangeValueForKey:@"mutablePalettePlugins"];
+    [_arrayController rearrangeObjects];
+    [tableView reloadData];
+    [tableView selectRowIndexes:destinationIndexes byExtendingSelection:NO];
     return YES;
 }
 

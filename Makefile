@@ -1,19 +1,22 @@
-PROJECT_NAME := $(shell xcodebuild -list | grep -i 'information about project' | sed 's/^.*"\(.*\)":/\1/g')
-TARGET       := $(shell xcodebuild -list | grep -A2 -E '\s+Targets:' | grep -v 'Targets:' | sed 's/^ *//g' | sort -r | head -1)
+BUNDLE = ReorderPalettes.glyphsPlugin
+CONTENTS = $(BUNDLE)/Contents
+EXECUTABLE = $(CONTENTS)/MacOS/ReorderPalettes
+SOURCES = $(addprefix ReorderPalettes/,ReorderPalettesPlugin.m ROPPalettePlugin.m ROPWindowController.m ROPTableColumn.m)
+HEADERS = $(SOURCES:.m=.h)
+VERSION = $(shell /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ReorderPalettes/Info.plist)
 
-.PHONY: plugin
-plugin:
-	xcodebuild -target $(TARGET)
-	command -v postbuild-codesign >/dev/null 2>&1 && postbuild-codesign
-	command -v postbuild-notarize >/dev/null 2>&1 && postbuild-notarize
-	cp -r build/Release/*.glyphsPlugin .
+.PHONY: all plugin archive
+all: plugin
 
-.PHONY: clean
-clean:
-	rm -rf build
-	rm -rf *.glyphsPlugin
+plugin: $(EXECUTABLE)
 
-archive: clean plugin
-	git archive -o "build/Release/$(PROJECT_NAME)-$$(git rev-parse --short HEAD).zip" HEAD
+$(EXECUTABLE): $(SOURCES) $(HEADERS) ReorderPalettes/Info.plist $(CONTENTS)/Resources/ROPWindowController.nib LICENSE NOTICE
+	mkdir -p $(CONTENTS)/MacOS
+	cp ReorderPalettes/Info.plist $(CONTENTS)/Info.plist
+	cp LICENSE NOTICE $(CONTENTS)/Resources/
+	xcrun clang -arch arm64 -arch x86_64 -mmacosx-version-min=12.0 -fobjc-arc -Wall -Wextra -Wno-unused-parameter -Werror -framework Cocoa -bundle $(SOURCES) -o $@
+	codesign --force --sign - $(BUNDLE)
 
-dist: clean plugin archive
+archive: plugin
+	mkdir -p build
+	ditto -c -k --keepParent --norsrc $(BUNDLE) build/ReorderPalettes-$(VERSION).zip

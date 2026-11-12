@@ -6,6 +6,7 @@
 //  Copyright © 2021 Morisawa Inc. All rights reserved.
 //
 
+// Modified for Glyphs 4 compatibility in 2026.
 #import "ROPTableColumn.h"
 
 @implementation ROPTableColumn
@@ -14,7 +15,7 @@
     NSSize size = NSZeroSize;
     NSTableView *tableView = [self tableView];
     NSInteger column = [[tableView tableColumns] indexOfObject:self];
-    for (NSUInteger row = 0; row < [tableView numberOfRows]; ++row) {
+    for (NSInteger row = 0; row < [tableView numberOfRows]; ++row) {
         NSTableCellView *cellView = [tableView viewAtColumn:column row:row makeIfNecessary:YES];
         NSView *contentView = [cellView textField];
         if (!contentView) contentView = [[cellView subviews] firstObject];

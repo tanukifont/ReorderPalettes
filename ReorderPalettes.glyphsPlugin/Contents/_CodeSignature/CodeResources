@@ -4,6 +4,14 @@
 <dict>
 	<key>files</key>
 	<dict>
+		<key>Resources/LICENSE</key>
+		<data>
+		ffBZWXCZu33PJdKprt+vRGX3LY0=
+		</data>
+		<key>Resources/NOTICE</key>
+		<data>
+		5f7LI03Lg3ScRsqacoiPbElFPJI=
+		</data>
 		<key>Resources/ROPWindowController.nib</key>
 		<data>
 		chw0J9YpJ6iTQEhSzfaQ+yJfUOk=
@@ -11,12 +19,22 @@
 	</dict>
 	<key>files2</key>
 	<dict>
+		<key>Resources/LICENSE</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			xx0jnfkXJvxRnG63LTGOxlggYnIysveWIZ6H3PNdCrQ=
+			</data>
+		</dict>
+		<key>Resources/NOTICE</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			LHmEECxy8SjhASWr73MlH9GKfbI97zkkEg8vfet9htw=
+			</data>
+		</dict>
 		<key>Resources/ROPWindowController.nib</key>
 		<dict>
-			<key>hash</key>
-			<data>
-			chw0J9YpJ6iTQEhSzfaQ+yJfUOk=
-			</data>
 			<key>hash2</key>
 			<data>
 			uB5iUim9qQg7hjgd9cejuQROKJnjbZSLHn/O/zMWWaw=

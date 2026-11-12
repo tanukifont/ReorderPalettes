@@ -6,9 +6,10 @@
 //  Copyright © 2021 Morisawa Inc. All rights reserved.
 //
 
+// Modified for Glyphs 4 compatibility in 2026.
 #import <Cocoa/Cocoa.h>
-#import <GlyphsCore/GlyphsPluginProtocol.h>
 
-@interface ReorderPalettesPlugin : NSObject <GlyphsPlugin>
+
+@interface ReorderPalettesPlugin : NSObject
 
 @end
